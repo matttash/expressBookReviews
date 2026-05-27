@@ -1,89 +1,217 @@
-const express = require('express');
-const books = require("./booksdb.js");
+const express = require("express");
+const axios = require("axios");
+let books = require("./booksdb.js");
+let users = require("./auth_users.js").users;
 
 const public_users = express.Router();
 
-/* =========================
-   TASK 6 - REGISTER USER SUPPORT
-========================= */
-let users = require("./auth_users.js").users;
-
-/* =========================
-   TASK 1 - GET ALL BOOKS
-========================= */
-public_users.get("/", (req, res) => {
-  return res.json(books);
+/* -------------------- TASK 1 -------------------- */
+public_users.get('/', function (req, res) {
+    res.send(JSON.stringify(books, null, 4));
 });
 
-/* =========================
-   TASK 2 - GET BY ISBN
-========================= */
-public_users.get("/isbn/:isbn", (req, res) => {
-  const book = books[req.params.isbn];
 
-  if (!book) {
-    return res.status(404).json({ message: "Book not found" });
-  }
+/* -------------------- TASK 2 -------------------- */
+public_users.get('/isbn/:isbn', function (req, res) {
 
-  return res.json(book);
+    const isbn = req.params.isbn;
+    const book = books[isbn];
+
+    if (book) {
+        return res.json(book);
+    }
+
+    return res.status(404).json({
+        message: "Book not found"
+    });
 });
 
-/* =========================
-   TASK 3 - GET BY AUTHOR
-========================= */
-public_users.get("/author/:author", (req, res) => {
-  const result = Object.values(books).filter(
-    b => b.author.toLowerCase() === req.params.author.toLowerCase()
-  );
 
-  return res.json(result);
+/* -------------------- TASK 3 -------------------- */
+public_users.get('/author/:author', function (req, res) {
+
+    const author = req.params.author.toLowerCase();
+
+    const filteredBooks = Object.keys(books)
+        .filter(key =>
+            books[key].author.toLowerCase() === author
+        )
+        .reduce((result, key) => {
+            result[key] = books[key];
+            return result;
+        }, {});
+
+    return res.json(filteredBooks);
 });
 
-/* =========================
-   TASK 4 - GET BY TITLE
-========================= */
-public_users.get("/title/:title", (req, res) => {
-  const result = Object.values(books).filter(
-    b => b.title.toLowerCase() === req.params.title.toLowerCase()
-  );
 
-  return res.json(result);
+/* -------------------- TASK 4 -------------------- */
+public_users.get('/title/:title', function (req, res) {
+
+    const title = req.params.title.toLowerCase();
+
+    const filteredBooks = Object.keys(books)
+        .filter(key =>
+            books[key].title.toLowerCase() === title
+        )
+        .reduce((result, key) => {
+            result[key] = books[key];
+            return result;
+        }, {});
+
+    return res.json(filteredBooks);
 });
 
-/* =========================
-   TASK 5 - GET REVIEWS
-========================= */
-public_users.get("/review/:isbn", (req, res) => {
-  const book = books[req.params.isbn];
 
-  if (!book) {
-    return res.status(404).json({ message: "Book not found" });
-  }
+/* -------------------- TASK 5 -------------------- */
+public_users.get('/review/:isbn', function (req, res) {
 
-  return res.json(book.reviews);
+    const isbn = req.params.isbn;
+
+    return res.json(books[isbn].reviews);
 });
 
-/* =========================
-   TASK 6 - REGISTER USER
-========================= */
+
+/* -------------------- TASK 6 -------------------- */
 public_users.post("/register", (req, res) => {
-  const { username, password } = req.body;
 
-  if (!username || !password) {
-    return res.status(400).json({ message: "Username and password required" });
-  }
+    const { username, password } = req.body;
 
-  const exists = users.find(u => u.username === username);
+    if (!username || !password) {
+        return res.status(400).json({
+            message: "Username and password required"
+        });
+    }
 
-  if (exists) {
-    return res.status(409).json({ message: "User already exists" });
-  }
+    const userExists = users.some(
+        user => user.username === username
+    );
 
-  users.push({ username, password });
+    if (userExists) {
+        return res.status(409).json({
+            message: "User already exists"
+        });
+    }
 
-  return res.json({
-    message: "User registered successfully"
-  });
+    users.push({
+        username,
+        password
+    });
+
+    return res.status(200).json({
+        message: "User registered successfully"
+    });
+});
+
+
+/* -------------------- TASK 10 -------------------- */
+public_users.get('/async', async function (req, res) {
+
+    try {
+
+        const data = await new Promise((resolve) => {
+            resolve(books);
+        });
+
+        return res.json(data);
+
+    } catch (err) {
+
+        return res.status(500).json({
+            message: err.message
+        });
+    }
+});
+
+
+/* -------------------- TASK 11 -------------------- */
+public_users.get('/async/isbn/:isbn', async function (req, res) {
+
+    try {
+
+        const isbn = req.params.isbn;
+
+        const data = await new Promise((resolve, reject) => {
+
+            if (books[isbn]) {
+                resolve(books[isbn]);
+            } else {
+                reject("Book not found");
+            }
+        });
+
+        return res.json(data);
+
+    } catch (err) {
+
+        return res.status(404).json({
+            message: err
+        });
+    }
+});
+
+
+/* -------------------- TASK 12 -------------------- */
+public_users.get('/async/author/:author', async function (req, res) {
+
+    try {
+
+        const author = req.params.author.toLowerCase();
+
+        const data = await new Promise((resolve) => {
+
+            const filteredBooks = Object.keys(books)
+                .filter(key =>
+                    books[key].author.toLowerCase() === author
+                )
+                .reduce((result, key) => {
+                    result[key] = books[key];
+                    return result;
+                }, {});
+
+            resolve(filteredBooks);
+        });
+
+        return res.json(data);
+
+    } catch (err) {
+
+        return res.status(500).json({
+            message: err.message
+        });
+    }
+});
+
+
+/* -------------------- TASK 13 -------------------- */
+public_users.get('/async/title/:title', async function (req, res) {
+
+    try {
+
+        const title = req.params.title.toLowerCase();
+
+        const data = await new Promise((resolve) => {
+
+            const filteredBooks = Object.keys(books)
+                .filter(key =>
+                    books[key].title.toLowerCase() === title
+                )
+                .reduce((result, key) => {
+                    result[key] = books[key];
+                    return result;
+                }, {});
+
+            resolve(filteredBooks);
+        });
+
+        return res.json(data);
+
+    } catch (err) {
+
+        return res.status(500).json({
+            message: err.message
+        });
+    }
 });
 
 module.exports.general = public_users;
