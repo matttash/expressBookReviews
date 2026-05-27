@@ -1,0 +1,3 @@
+
+curl -c cookies.txt -X POST http://localhost:5000/customer/login -H 'Content-Type: application/json' -d '{"username":"newuser","password":"12345"}'
+{"message":"User logged in successfully","accessToken":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6Im5ld3VzZXIiLCJpYXQiOjE3NzA4MTk1NzAsImV4cCI6MTc3MDgyMzE3MH0._pveGxtojNtN4MsDYkzb68LrE29CSKtFODug1lG3O4U"}
